@@ -1,0 +1,30 @@
+div.NoSignal {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    h5 {
+        /* NO SIGNAL */
+        font-style: normal;
+        font-weight: 400;
+        font-size: 96px;
+        line-height: 122px;
+        text-align: center;
+        color: #FFFFFF;
+    }
+
+}
+
+/* NO SIGNAL */
+
+
+@media (max-width: 768px) {
+    div.NoSignal {
+        h5 {
+            font-size: 64px;
+            font-weight: 400;
+            line-height: 82px;
+        }
+    }
+}
+
