@@ -63,6 +63,8 @@
 
 @media (max-width: 768px) {
     .page {
+        padding: 6em 4em;
+
         h5 {
             font-size: 64px;
             font-weight: 400;
