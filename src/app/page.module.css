@@ -112,22 +112,6 @@ a.secondary {
     }
 }
 
-@media (max-width: 600px) {
-    .main {
-        padding: 48px 24px;
-    }
-
-    .intro {
-        gap: 16px;
-    }
-
-    .intro h1 {
-        font-size: 32px;
-        line-height: 40px;
-        letter-spacing: -1.92px;
-    }
-}
-
 @media (prefers-color-scheme: dark) {
     .logo {
         filter: invert();
@@ -152,6 +136,7 @@ a.secondary {
         padding: 6em 4em;
         img {
             max-width: 506px;
+            width: 65.8854vw;
         }
     }
 }

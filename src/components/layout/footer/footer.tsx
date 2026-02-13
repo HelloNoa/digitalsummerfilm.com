@@ -7,13 +7,13 @@ export default function Footer() {
     <footer className={styles.footer}>
       <div className={styles.logo}>
         <a href={'/'}>
-          <Image
+          <img
             className={styles.logo}
             src="/logo/banner.svg"
             alt="Next.js logo"
             width={746}
             height={77}
-            priority
+            loading="lazy"
           />
         </a>
       </div>

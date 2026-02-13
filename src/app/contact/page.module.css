@@ -69,9 +69,9 @@
     .page {
         padding: 6em 4em;
         h5 {
-            font-size: 32px;
-            line-height: 41px;
-            margin-bottom: 25px;
+            font-size: 4.1667vw;
+            line-height: 5.3385vw;
+            margin-bottom: 3.2552vw;
         }
     }
 }

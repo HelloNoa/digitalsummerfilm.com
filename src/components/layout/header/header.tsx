@@ -7,13 +7,13 @@ export default function Header() {
     <header className={styles.header}>
       <div className={styles.logo}>
         <a href={'/'}>
-          <Image
+          <img
             className={styles.logo}
             src="/logo/logo.svg"
             alt="Next.js logo"
             width={181}
             height={87}
-            priority
+            loading="lazy"
           />
         </a>
       </div>

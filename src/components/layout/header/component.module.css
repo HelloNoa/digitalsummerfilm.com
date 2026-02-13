@@ -5,7 +5,11 @@ header.header {
     align-items: center;
 
     > .logo {
-        margin-bottom:54px;
+        margin-bottom: 54px;
+        img {
+            max-width: 181px;
+            height: auto;
+        }
     }
 
     ul.nav {
@@ -14,6 +18,7 @@ header.header {
         flex-direction: row;
         justify-content: space-evenly;
         list-style: none;
+
         li {
             a {
                 font-size: 24px;
@@ -26,4 +31,27 @@ header.header {
     }
 
 
+}
+
+@media (max-width: 768px) {
+    header.header {
+        padding: 14.8438vw 0 0;
+
+        > .logo {
+            margin-bottom: 7.0313vw;
+            img {
+                max-width: 181px;
+                width: 23.5677vw;
+            }
+        }
+
+        ul.nav {
+            li {
+                a {
+                    font-size: 3.1250vw;
+                    line-height: 4.0365vw;
+                }
+            }
+        }
+    }
 }

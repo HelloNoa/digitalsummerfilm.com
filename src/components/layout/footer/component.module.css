@@ -4,7 +4,26 @@ footer.footer {
     padding: 0 0 114px 0;
 
     > .logo {
-        margin-bottom:54px;
+        margin-bottom: 54px;
+        img {
+            max-width: 746px;
+            height: auto;
+        }
     }
 
+}
+
+@media (max-width: 768px) {
+    footer.footer {
+        padding: 0 0 14.8438vw 0;
+
+        > .logo {
+            margin-bottom: 7.0313vw;
+
+            img {
+                max-width: 746px;
+                width: 97.1354vw;
+            }
+        }
+    }
 }
