@@ -78,6 +78,7 @@
 
 @media (max-width: 768px) {
     .page {
+        padding: 6em 4em;
         img{
             max-width: 444px;
             height: auto;
