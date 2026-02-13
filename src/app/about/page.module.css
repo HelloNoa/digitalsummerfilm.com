@@ -60,7 +60,7 @@
 }
 
 
-@media (max-width: 600px) {
+@media (max-width: 768px) {
     .page {
         h5 {
             font-size: 64px;

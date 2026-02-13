@@ -10,10 +10,15 @@
   --button-secondary-border: #ebebeb;
 
   display: flex;
-  min-height: 100vh;
+  min-height: 70vh;
   align-items: center;
   justify-content: center;
   background-color: var(--background);
+
+    img{
+        width: 616px;
+        height: auto;
+    }
 }
 
 .main {
@@ -137,4 +142,13 @@ a.secondary {
     --button-secondary-hover: #1a1a1a;
     --button-secondary-border: #1a1a1a;
   }
+}
+
+
+@media (max-width: 768px) {
+    .page {
+        img{
+            width: 506px;
+        }
+    }
 }
