@@ -14,9 +14,11 @@
     align-items: center;
     justify-content: center;
     background-color: var(--background);
+    padding: 6em 2em;
 
     img {
-        width: 616px;
+        max-width: 616px;
+        width: 100%;
         height: auto;
     }
 }
@@ -148,7 +150,7 @@ a.secondary {
 @media (max-width: 768px) {
     .page {
         img {
-            width: 506px;
+            max-width: 506px;
         }
     }
 }

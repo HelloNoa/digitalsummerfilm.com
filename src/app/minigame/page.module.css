@@ -15,7 +15,7 @@
     align-items: center;
     justify-content: center;
     background-color: var(--background);
-    padding: 100px 20px;
+    padding: 6em 2em;
 
     hr {
         height: 100px;
@@ -38,7 +38,8 @@
     }
 
     img {
-        width: 860px;
+        max-width: 860px;
+        width: 100%;
         height: auto;
     }
 }
@@ -78,8 +79,7 @@
 @media (max-width: 768px) {
     .page {
         img{
-
-            width: 444px;
+            max-width: 444px;
             height: auto;
         }
     }
