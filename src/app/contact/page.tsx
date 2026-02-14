@@ -21,7 +21,7 @@ export default function Contact() {
     <div className={styles.page}>
       <h5>Email</h5>
       <h5>
-        <a href="mailto:contact@digitalsummerfilm.com">contact@digitalsummerfilm.com ({label})</a>
+        <a href="mailto:contact@digitalsummerfilm.com">contact@digitalsummerfilm.com</a>
       </h5>
       {/*<h5>*/}
       {/*  <a href="mailto:jsh@digitalsummerfilm.com">jsh@digitalsummerfilm.com</a>*/}
