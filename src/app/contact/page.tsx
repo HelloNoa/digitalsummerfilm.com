@@ -5,11 +5,11 @@ export default function Contact() {
     <div className={styles.page}>
       <h5>Email</h5>
       <h5>
-        <a href="mailto:oyb@digitalsummerfilm.com">oyb@digitalsummerfilm.com</a>
+        <a href="mailto:contact@digitalsummerfilm.com">contact@digitalsummerfilm.com</a>
       </h5>
-      <h5>
-        <a href="mailto:jsh@digitalsummerfilm.com">jsh@digitalsummerfilm.com</a>
-      </h5>
+      {/*<h5>*/}
+      {/*  <a href="mailto:jsh@digitalsummerfilm.com">jsh@digitalsummerfilm.com</a>*/}
+      {/*</h5>*/}
       <hr/>
       <h5>INSTAGRAM DM</h5>
       <h5><a href={"https://www.instagram.com/digitalsummer_film/"} target={"_blank"}>@digitalsummer_film</a></h5>
