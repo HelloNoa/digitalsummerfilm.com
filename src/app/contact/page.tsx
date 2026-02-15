@@ -30,8 +30,8 @@ export default function Contact() {
       <h5>INSTAGRAM DM</h5>
       <h5><a href={'https://www.instagram.com/digitalsummer_film/'} target={'_blank'}>@digitalsummer_film</a></h5>
       <hr/>
-      <h5>CALL</h5>
-      <h5>+82 010-2002-2026</h5>
+      {/*<h5>CALL</h5>*/}
+      {/*<h5>+82 010-2002-2026</h5>*/}
     </div>
   );
 }
