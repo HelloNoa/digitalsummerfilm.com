@@ -5,8 +5,10 @@ import { useEffect, useRef, useState, useCallback } from "react";
 const GRAVITY = 0.2;
 const SPEED = 16;
 const HEADER_H = 70;
-const FOOTER_H = 70;
-const SIDE_PAD = 36;
+// const FOOTER_H = 70;
+const FOOTER_H = 0;
+// const SIDE_PAD = 36;
+const SIDE_PAD = 0;
 
 // 돌 크기: 필드 너비의 18% (최소 60px)
 const STONE_RATIO = 0.18;

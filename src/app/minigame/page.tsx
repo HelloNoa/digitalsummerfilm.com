@@ -7,7 +7,7 @@ export default function Works() {
     <div className={styles.page}>
       <div style={{
         width: '100%',
-        height: '70vw'
+        height: '70vh'
       }}>
         <FlappyBaby/>
       </div>
