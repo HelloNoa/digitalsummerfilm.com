@@ -167,10 +167,11 @@ export default function FlappyBaby() {
       // }
       
       const { fw, fh } = getFieldSize();
-      const p = fw * 0.01 * 0.5;
+      const pw = fh * 0.01 * 0.5;
+      const ph = fh * 0.01;
       // velRef.current.x = (dx / len) * SPEED;
-      velRef.current.x = (dx / len) * SPEED * p * 0.1;
-      velRef.current.y = -Math.max(Math.abs(dy / len), 0.4) * SPEED * p * 0.1;
+      velRef.current.x = (dx / len) * SPEED * pw * 0.1;
+      velRef.current.y = -Math.max(Math.abs(dy / len), 0.4) * SPEED * ph * 0.1;
       
       if (gameStateRef.current === "idle") {
         gameStateRef.current = "playing";
