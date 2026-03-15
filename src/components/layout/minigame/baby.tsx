@@ -126,7 +126,7 @@ export default function FlappyBaby() {
       }
       
       // x속도에 비례해서 회전 누적
-      rotationRef.current += velRef.current.x * delta * 0.5;
+      rotationRef.current += velRef.current.x * delta * 2;
       setRotation(rotationRef.current);
 
       setRenderPos({ ...posRef.current });
