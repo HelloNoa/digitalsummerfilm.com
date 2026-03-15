@@ -4,11 +4,12 @@ import { useEffect, useRef, useState, useCallback } from "react";
 
 const GRAVITY = 0.4;
 const SPEED = 16;
-const STONE_W = 100 * 2;
-const STONE_H = 70 * 2;
 const HEADER_H = 70;
 const FOOTER_H = 70;
 const SIDE_PAD = 36;
+
+// 돌 크기: 필드 너비의 18% (최소 60px)
+const STONE_RATIO = 0.18;
 
 type GameState = "idle" | "playing" | "dead";
 
@@ -27,9 +28,12 @@ export default function FlappyBaby() {
   const [count, setCount] = useState(0);
   const [shake, setShake] = useState(false);
   const [renderPos, setRenderPos] = useState({ x: 0, y: 0 });
+  const [stoneSize, setStoneSize] = useState({ w: 100, h: 70 });
   
   const velRef = useRef({ x: 0, y: 0 });
   const posRef = useRef({ x: 0, y: 0 });
+  // stoneSizeRef: 게임 루프에서 최신 돌 크기를 동기적으로 읽기 위해 사용
+  const stoneSizeRef = useRef({ w: 100, h: 70 });
   const animFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const countRef = useRef(0);
@@ -42,14 +46,22 @@ export default function FlappyBaby() {
     return { fw: fieldRef.current.clientWidth, fh: fieldRef.current.clientHeight };
   }, []);
   
+  const computeStoneSize = useCallback((fw: number) => {
+    const w = Math.max(Math.round(fw * STONE_RATIO), 60);
+    const h = Math.round(w * 0.7);
+    return { w, h };
+  }, []);
+  
   const centerStone = useCallback(() => {
     const { fw, fh } = getFieldSize();
-    const p = { x: fw / 2 - STONE_W / 2, y: fh / 2 - STONE_H / 2 };
+    const size = computeStoneSize(fw);
+    stoneSizeRef.current = size;
+    setStoneSize(size);
+    const p = { x: fw / 2 - size.w / 2, y: fh / 2 - size.h / 2 };
     posRef.current = { ...p };
     setRenderPos({ ...p });
-  }, [getFieldSize]);
+  }, [getFieldSize, computeStoneSize]);
   
-  // Re-center on resize only when idle
   useEffect(() => {
     const obs = new ResizeObserver(() => {
       if (gameStateRef.current === "idle") centerStone();
@@ -58,7 +70,6 @@ export default function FlappyBaby() {
     return () => obs.disconnect();
   }, [centerStone]);
   
-  // Initial center after mount
   useEffect(() => {
     centerStone();
   }, [centerStone]);
@@ -76,46 +87,53 @@ export default function FlappyBaby() {
     centerStone();
   }, [centerStone]);
   
-  const gameLoop = useCallback((timestamp: number) => {
-    if (!lastTimeRef.current) lastTimeRef.current = timestamp;
-    const delta = Math.min((timestamp - lastTimeRef.current) / 16, 3);
-    lastTimeRef.current = timestamp;
-    
-    const { fw, fh } = getFieldSize();
-    
-    velRef.current.y += GRAVITY * delta;
-    posRef.current.x += velRef.current.x * delta;
-    posRef.current.y += velRef.current.y * delta;
-    
-    // Bounce left/right
-    if (posRef.current.x < 0) {
-      posRef.current.x = 0;
-      velRef.current.x = Math.abs(velRef.current.x) * 0.65;
-    }
-    if (posRef.current.x + STONE_W > fw) {
-      posRef.current.x = fw - STONE_W;
-      velRef.current.x = -Math.abs(velRef.current.x) * 0.65;
-    }
-    
-    // Die top/bottom
-    if (posRef.current.y < 0 || posRef.current.y + STONE_H > fh) {
-      posRef.current.y = Math.max(0, Math.min(posRef.current.y, fh - STONE_H));
+  const gameLoop = useCallback(
+    (timestamp: number) => {
+      if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+      const delta = Math.min((timestamp - lastTimeRef.current) / 16, 3);
+      lastTimeRef.current = timestamp;
+      
+      const { fw, fh } = getFieldSize();
+      const { w: sw, h: sh } = stoneSizeRef.current;
+      
+      velRef.current.y += GRAVITY * delta;
+      posRef.current.x += velRef.current.x * delta;
+      posRef.current.y += velRef.current.y * delta;
+      
+      // 좌우 바운스
+      if (posRef.current.x < 0) {
+        posRef.current.x = 0;
+        velRef.current.x = Math.abs(velRef.current.x) * 0.65;
+      }
+      if (posRef.current.x + sw > fw) {
+        posRef.current.x = fw - sw;
+        velRef.current.x = -Math.abs(velRef.current.x) * 0.65;
+      }
+      
+      // 위아래 벽 = 게임 오버
+      if (posRef.current.y < 0 || posRef.current.y + sh > fh) {
+        posRef.current.y = Math.max(0, Math.min(posRef.current.y, fh - sh));
+        setRenderPos({ ...posRef.current });
+        triggerShake();
+        gameStateRef.current = "dead";
+        setGameState("dead");
+        return;
+      }
+      
       setRenderPos({ ...posRef.current });
-      triggerShake();
-      gameStateRef.current = "dead";
-      setGameState("dead");
-      return;
-    }
-    
-    setRenderPos({ ...posRef.current });
-    animFrameRef.current = requestAnimationFrame(gameLoop);
-  }, [getFieldSize]);
+      animFrameRef.current = requestAnimationFrame(gameLoop);
+    },
+    [getFieldSize]
+  );
   
   const handleInteraction = useCallback(
     (clickX: number, clickY: number) => {
       const sx = posRef.current.x;
       const sy = posRef.current.y;
-      if (clickX < sx || clickX > sx + STONE_W || clickY < sy || clickY > sy + STONE_H) return;
+      const { w: sw, h: sh } = stoneSizeRef.current;
+      
+      // 돌 히트 테스트
+      if (clickX < sx || clickX > sx + sw || clickY < sy || clickY > sy + sh) return;
       
       if (gameStateRef.current === "dead") {
         resetState();
@@ -124,17 +142,17 @@ export default function FlappyBaby() {
         return;
       }
       
-      const dx = (sx + STONE_W / 2) - clickX;
-      const dy = (sy + STONE_H / 2) - clickY;
+      // 클릭 위치 반대 방향으로 튕김
+      const dx = sx + sw / 2 - clickX;
+      const dy = sy + sh / 2 - clickY;
       const len = Math.sqrt(dx * dx + dy * dy);
       
       if (len < 8) {
-        // 중앙 클릭: 무조건 위로
         velRef.current.x = 0;
         velRef.current.y = -SPEED;
       } else {
         velRef.current.x = (dx / len) * SPEED;
-        // 돌 위쪽 클릭 → 위로, 아래쪽 클릭 → 약하게 위로 (항상 위 방향 보장)
+        // 항상 위쪽 방향 보장
         velRef.current.y = dy > 0 ? -(dy / len) * SPEED : SPEED * 0.3;
       }
       
@@ -175,7 +193,10 @@ export default function FlappyBaby() {
   
   useEffect(() => () => cancelAnimationFrame(animFrameRef.current), []);
   
-  const stoneLabel = gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
+  const stoneLabel =
+          gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
+  const { w: sw, h: sh } = stoneSize;
+  const fontSize = Math.max(Math.round(sw * 0.15), 10);
   
   return (
     <div
@@ -209,26 +230,28 @@ export default function FlappyBaby() {
         }
       `}</style>
       
-      {/* Header */}
-      <div style={{
-        height: HEADER_H,
-        flexShrink: 0,
-        display: "flex",
-        alignItems: "center",
-        paddingLeft: 20,
-        gap: 10,
-      }}>
+      {/* 헤더 */}
+      <div
+        style={{
+          height: HEADER_H,
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 20,
+          gap: 10,
+        }}
+      >
         <BabySVG size={32} />
         <span style={{ color: "white", fontSize: 24, fontWeight: 300, letterSpacing: 2 }}>
           {count}
         </span>
       </div>
       
-      {/* Middle row */}
+      {/* 미들 (사이드 패딩 + 플레이 필드) */}
       <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
         <div style={{ width: SIDE_PAD, flexShrink: 0 }} />
         
-        {/* Play field */}
+        {/* 플레이 필드 */}
         <div
           ref={fieldRef}
           onClick={handleClick}
@@ -241,29 +264,30 @@ export default function FlappyBaby() {
             cursor: "default",
           }}
         >
-          {/* Stone */}
+          {/* 돌 */}
           <div
             style={{
               position: "absolute",
               left: renderPos.x,
               top: renderPos.y,
-              width: STONE_W,
-              height: STONE_H,
+              width: sw,
+              height: sh,
               pointerEvents: "none",
               animation: gameState === "idle" ? "float 2s ease-in-out infinite" : "none",
             }}
           >
-            <svg width={STONE_W} height={STONE_H} viewBox="0 0 100 70" fill="none">
+            <svg width={sw} height={sh} viewBox="0 0 100 70" fill="none">
               <path
                 d="M10 35 C10 15 25 5 50 5 C75 5 90 15 90 35 C90 55 75 65 50 65 C25 65 10 55 10 35Z"
                 fill="black"
               />
               {stoneLabel && (
                 <text
-                  x="50" y="40"
+                  x="50"
+                  y="40"
                   textAnchor="middle"
                   fill="white"
-                  fontSize="15"
+                  fontSize={fontSize}
                   fontFamily="'Helvetica Neue', Arial, sans-serif"
                   fontWeight="300"
                   letterSpacing="2"
@@ -274,23 +298,28 @@ export default function FlappyBaby() {
             </svg>
           </div>
           
+          {/* 게임 오버 스코어 */}
           {gameState === "dead" && (
-            <div style={{
-              position: "absolute",
-              inset: 0,
-              display: "flex",
-              alignItems: "flex-start",
-              justifyContent: "center",
-              paddingTop: 16,
-              pointerEvents: "none",
-            }}>
-              <span style={{
-                fontSize: 11,
-                letterSpacing: 3,
-                color: "#000",
-                opacity: 0.3,
-                textTransform: "uppercase",
-              }}>
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "center",
+                paddingTop: 16,
+                pointerEvents: "none",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 11,
+                  letterSpacing: 3,
+                  color: "#000",
+                  opacity: 0.3,
+                  textTransform: "uppercase",
+                }}
+              >
                 score: {count}
               </span>
             </div>
@@ -300,7 +329,7 @@ export default function FlappyBaby() {
         <div style={{ width: SIDE_PAD, flexShrink: 0 }} />
       </div>
       
-      {/* Footer */}
+      {/* 푸터 */}
       <div style={{ height: FOOTER_H, flexShrink: 0 }} />
     </div>
   );
