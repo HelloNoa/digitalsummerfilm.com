@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 
-const GRAVITY = 0.4;
+const GRAVITY = 0.2;
 const SPEED = 16;
 const HEADER_H = 70;
 const FOOTER_H = 70;
@@ -168,7 +168,7 @@ export default function FlappyBaby() {
         setCount(countRef.current);
       }
     },
-    [gameLoop, resetState, getFieldSize]
+    [gameLoop, resetState]
   );
   
   const handleClick = useCallback(
