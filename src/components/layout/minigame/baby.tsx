@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import Image from 'next/image';
 
 const GRAVITY = 0.2;
 const SPEED = 16;
@@ -257,7 +258,9 @@ export default function FlappyBaby() {
           gap: 10,
         }}
       >
-        <BabySVG size={32} />
+        
+        <Image width={560 * 0.05} height={743 * 0.05} src={'/minigame/baby.png'} alt={"score icon"}/>
+        {/*<BabySVG size={32} />*/}
         <span style={{ color: "white", fontSize: 24, fontWeight: 300, letterSpacing: 2 }}>
           {count}
         </span>
@@ -292,26 +295,27 @@ export default function FlappyBaby() {
               animation: gameState === "idle" ? "float 2s ease-in-out infinite" : "none",
             }}
           >
-            <svg width={sw} height={sh} viewBox="0 0 100 70" fill="none">
-              <path
-                d="M10 35 C10 15 25 5 50 5 C75 5 90 15 90 35 C90 55 75 65 50 65 C25 65 10 55 10 35Z"
-                fill="black"
-              />
-              {stoneLabel && (
-                <text
-                  x="50"
-                  y="40"
-                  textAnchor="middle"
-                  fill="white"
-                  fontSize={fontSize}
-                  fontFamily="'Helvetica Neue', Arial, sans-serif"
-                  fontWeight="300"
-                  letterSpacing="2"
-                >
-                  {stoneLabel}
-                </text>
-              )}
-            </svg>
+            <Image width={sw} height={sh} src={'/minigame/stone.png'} alt={"dsd"}/>
+            {/*<svg width={sw} height={sh} viewBox="0 0 100 70" fill="none">*/}
+            {/*  <path*/}
+            {/*    d="M10 35 C10 15 25 5 50 5 C75 5 90 15 90 35 C90 55 75 65 50 65 C25 65 10 55 10 35Z"*/}
+            {/*    fill="black"*/}
+            {/*  />*/}
+            {/*  {stoneLabel && (*/}
+            {/*    <text*/}
+            {/*      x="50"*/}
+            {/*      y="40"*/}
+            {/*      textAnchor="middle"*/}
+            {/*      fill="white"*/}
+            {/*      fontSize={fontSize}*/}
+            {/*      fontFamily="'Helvetica Neue', Arial, sans-serif"*/}
+            {/*      fontWeight="300"*/}
+            {/*      letterSpacing="2"*/}
+            {/*    >*/}
+            {/*      {stoneLabel}*/}
+            {/*    </text>*/}
+            {/*  )}*/}
+            {/*</svg>*/}
           </div>
           
           {/* 게임 오버 스코어 */}
