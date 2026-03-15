@@ -168,7 +168,7 @@ export default function FlappyBaby() {
         setCount(countRef.current);
       }
     },
-    [gameLoop, resetState]
+    [gameLoop, resetState, getFieldSize]
   );
   
   const handleClick = useCallback(
@@ -196,7 +196,7 @@ export default function FlappyBaby() {
   const stoneLabel =
           gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
   const { w: sw, h: sh } = stoneSize;
-  const fontSize = Math.max(Math.round(sw * 0.15), 10);
+  const fontSize = Math.min(Math.max(Math.round(sw * 0.15), 10), 16);
   
   return (
     <div
