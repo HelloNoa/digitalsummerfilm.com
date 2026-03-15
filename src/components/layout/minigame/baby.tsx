@@ -32,6 +32,8 @@ export default function FlappyBaby() {
   const [shake, setShake] = useState(false);
   const [renderPos, setRenderPos] = useState({ x: 0, y: 0 });
   const [stoneSize, setStoneSize] = useState({ w: 100, h: 70 });
+  const [rotation, setRotation] = useState(0);
+  const rotationRef = useRef(0);
   
   const velRef = useRef({ x: 0, y: 0 });
   const posRef = useRef({ x: 0, y: 0 });
@@ -123,6 +125,10 @@ export default function FlappyBaby() {
         return;
       }
       
+      // x속도에 비례해서 회전 누적
+      rotationRef.current += velRef.current.x * delta * 0.5;
+      setRotation(rotationRef.current);
+
       setRenderPos({ ...posRef.current });
       animFrameRef.current = requestAnimationFrame(gameLoop);
     },
@@ -140,6 +146,8 @@ export default function FlappyBaby() {
       
       if (gameStateRef.current === "dead") {
         resetState();
+        rotationRef.current = 0;
+        setRotation(0);
         gameStateRef.current = "idle";
         setGameState("idle");
         return;
@@ -295,7 +303,13 @@ export default function FlappyBaby() {
               animation: gameState === "idle" ? "float 2s ease-in-out infinite" : "none",
             }}
           >
-            <Image width={sw} height={sh} src={'/minigame/stone.png'} alt={"dsd"}/>
+            <div style={{
+              transform: `rotate(${rotation}deg)`,
+              width: sw,
+              height: sh,
+            }}>
+              <Image width={sw} height={sh} src={'/minigame/stone.png'} alt={"dsd"}/>
+            </div>
             {/*<svg width={sw} height={sh} viewBox="0 0 100 70" fill="none">*/}
             {/*  <path*/}
             {/*    d="M10 35 C10 15 25 5 50 5 C75 5 90 15 90 35 C90 55 75 65 50 65 C25 65 10 55 10 35Z"*/}
