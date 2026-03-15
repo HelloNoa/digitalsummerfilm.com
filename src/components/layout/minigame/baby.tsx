@@ -8,7 +8,7 @@ const STONE_W = 100;
 const STONE_H = 70;
 const HEADER_H = 80; // top black bar
 const FOOTER_H = 80; // bottom black bar
-const SIDE_PAD = 40; // left/right black border
+const SIDE_PAD = 80; // left/right black border
 
 type GameState = "idle" | "playing" | "dead";
 
