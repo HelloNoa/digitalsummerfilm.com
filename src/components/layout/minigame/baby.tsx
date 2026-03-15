@@ -99,6 +99,7 @@ export default function FlappyBaby() {
       velRef.current.y += GRAVITY * delta;
       posRef.current.x += velRef.current.x * delta;
       posRef.current.y += velRef.current.y * delta;
+      console.log(velRef.current.y * delta)
       
       // 좌우 바운스
       if (posRef.current.x < 0) {
@@ -147,14 +148,27 @@ export default function FlappyBaby() {
       const dy = sy + sh / 2 - clickY;
       const len = Math.sqrt(dx * dx + dy * dy);
       
-      if (len < 8) {
-        velRef.current.x = 0;
-        velRef.current.y = -SPEED;
-      } else {
-        velRef.current.x = (dx / len) * SPEED;
-        // 항상 위쪽 방향 보장
-        velRef.current.y = dy > 0 ? -(dy / len) * SPEED : SPEED * 0.3;
-      }
+      velRef.current.x = 0;
+      velRef.current.y = -SPEED;
+      
+      // if (len < 8) {
+      //   velRef.current.x = 0;
+      //   velRef.current.y = -SPEED;
+      // } else {
+      //   velRef.current.x = (dx / len) * SPEED;
+      //   // Y: 항상 위로, X: 클릭 반대 방향
+      //   // velRef.current.y = -Math.max(Math.abs(dy / len), 0.4) * SPEED;
+      //   const { fw, fh } = getFieldSize();
+      //   const yy = fw * 0.01 * 0.5;
+      //   console.log(yy)
+      //   velRef.current.y = -yy;
+      // }
+      
+      const { fw, fh } = getFieldSize();
+      const p = fw * 0.01 * 0.5;
+      // velRef.current.x = (dx / len) * SPEED;
+      velRef.current.x = (dx / len) * SPEED * p * 0.1;
+      velRef.current.y = -Math.max(Math.abs(dy / len), 0.4) * SPEED * p * 0.1;
       
       if (gameStateRef.current === "idle") {
         gameStateRef.current = "playing";
