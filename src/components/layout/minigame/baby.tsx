@@ -4,16 +4,11 @@ import { useEffect, useRef, useState, useCallback } from "react";
 
 const GRAVITY = 0.4;
 const SPEED = 11;
-const GAME_WIDTH = 700;
-const GAME_HEIGHT = 700;
 const STONE_W = 100;
 const STONE_H = 70;
-const WALL_PADDING = 80;
-
-const FIELD_TOP = WALL_PADDING;
-const FIELD_BOTTOM = GAME_HEIGHT - WALL_PADDING;
-const FIELD_LEFT = WALL_PADDING / 2;
-const FIELD_RIGHT = GAME_WIDTH - WALL_PADDING / 2;
+const HEADER_H = 80; // top black bar
+const FOOTER_H = 80; // bottom black bar
+const SIDE_PAD = 40; // left/right black border
 
 type GameState = "idle" | "playing" | "dead";
 
@@ -31,23 +26,40 @@ export default function FlappyBaby() {
   const [gameState, setGameState] = useState<GameState>("idle");
   const [count, setCount] = useState(0);
   const [shake, setShake] = useState(false);
-  const [renderPos, setRenderPos] = useState({
-                                               x: GAME_WIDTH / 2 - STONE_W / 2,
-                                               y: GAME_HEIGHT / 2 - STONE_H / 2,
-                                             });
+  const [renderPos, setRenderPos] = useState({ x: 0, y: 0 });
+  const [fieldSize, setFieldSize] = useState({ w: 0, h: 0 });
   
   const velRef = useRef({ x: 0, y: 0 });
-  const posRef = useRef({
-                          x: GAME_WIDTH / 2 - STONE_W / 2,
-                          y: GAME_HEIGHT / 2 - STONE_H / 2,
-                        });
+  const posRef = useRef({ x: 0, y: 0 }); // in field-local px
   const animFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const countRef = useRef(0);
   const gameStateRef = useRef<GameState>("idle");
-  
-  // fieldRef: the white play field div, used to convert click coords
   const fieldRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  // Compute field size from container
+  const updateFieldSize = useCallback(() => {
+    if (!containerRef.current) return;
+    const vw = containerRef.current.clientWidth;
+    const vh = containerRef.current.clientHeight;
+    const fw = Math.max(vw - SIDE_PAD * 2, 100);
+    const fh = Math.max(vh - HEADER_H - FOOTER_H, 100);
+    setFieldSize({ w: fw, h: fh });
+    // Re-center stone if idle
+    if (gameStateRef.current === "idle") {
+      const cx = fw / 2 - STONE_W / 2;
+      const cy = fh / 2 - STONE_H / 2;
+      posRef.current = { x: cx, y: cy };
+      setRenderPos({ x: cx, y: cy });
+    }
+  }, []);
+  
+  useEffect(() => {
+    updateFieldSize();
+    window.addEventListener("resize", updateFieldSize);
+    return () => window.removeEventListener("resize", updateFieldSize);
+  }, [updateFieldSize]);
   
   const triggerShake = () => {
     setShake(true);
@@ -55,10 +67,10 @@ export default function FlappyBaby() {
   };
   
   const resetState = useCallback(() => {
-    const initPos = {
-      x: GAME_WIDTH / 2 - STONE_W / 2,
-      y: GAME_HEIGHT / 2 - STONE_H / 2,
-    };
+    if (!fieldRef.current) return;
+    const fw = fieldRef.current.clientWidth;
+    const fh = fieldRef.current.clientHeight;
+    const initPos = { x: fw / 2 - STONE_W / 2, y: fh / 2 - STONE_H / 2 };
     posRef.current = { ...initPos };
     velRef.current = { x: 0, y: 0 };
     countRef.current = 0;
@@ -71,23 +83,26 @@ export default function FlappyBaby() {
     const delta = Math.min((timestamp - lastTimeRef.current) / 16, 3);
     lastTimeRef.current = timestamp;
     
+    const fw = fieldRef.current?.clientWidth ?? 300;
+    const fh = fieldRef.current?.clientHeight ?? 300;
+    
     velRef.current.y += GRAVITY * delta;
     posRef.current.x += velRef.current.x * delta;
     posRef.current.y += velRef.current.y * delta;
     
-    // Bounce off left/right field walls
-    if (posRef.current.x < FIELD_LEFT) {
-      posRef.current.x = FIELD_LEFT;
+    // Bounce left/right
+    if (posRef.current.x < 0) {
+      posRef.current.x = 0;
       velRef.current.x = Math.abs(velRef.current.x) * 0.65;
     }
-    if (posRef.current.x + STONE_W > FIELD_RIGHT) {
-      posRef.current.x = FIELD_RIGHT - STONE_W;
+    if (posRef.current.x + STONE_W > fw) {
+      posRef.current.x = fw - STONE_W;
       velRef.current.x = -Math.abs(velRef.current.x) * 0.65;
     }
     
-    // Die on top/bottom
-    if (posRef.current.y < FIELD_TOP || posRef.current.y + STONE_H > FIELD_BOTTOM) {
-      posRef.current.y = Math.max(FIELD_TOP, Math.min(posRef.current.y, FIELD_BOTTOM - STONE_H));
+    // Die top/bottom
+    if (posRef.current.y < 0 || posRef.current.y + STONE_H > fh) {
+      posRef.current.y = Math.max(0, Math.min(posRef.current.y, fh - STONE_H));
       setRenderPos({ ...posRef.current });
       triggerShake();
       gameStateRef.current = "dead";
@@ -99,24 +114,15 @@ export default function FlappyBaby() {
     animFrameRef.current = requestAnimationFrame(gameLoop);
   }, []);
   
-  // Click handler on the FIELD — we do manual hit-test against posRef
-  const handleFieldClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!fieldRef.current) return;
-      
-      const rect = fieldRef.current.getBoundingClientRect();
-      // Click position relative to field
-      const clickX = e.clientX - rect.left;
-      const clickY = e.clientY - rect.top;
-      
-      // Stone bounds in field-local coords
-      const sx = posRef.current.x - FIELD_LEFT;
-      const sy = posRef.current.y - FIELD_TOP;
-      
+  // Shared interaction logic: given field-local (clickX, clickY)
+  const handleInteraction = useCallback(
+    (clickX: number, clickY: number) => {
+      // Hit test against stone
+      const sx = posRef.current.x;
+      const sy = posRef.current.y;
       const hitX = clickX >= sx && clickX <= sx + STONE_W;
       const hitY = clickY >= sy && clickY <= sy + STONE_H;
-      
-      if (!hitX || !hitY) return; // click missed the stone
+      if (!hitX || !hitY) return;
       
       if (gameStateRef.current === "dead") {
         cancelAnimationFrame(animFrameRef.current);
@@ -126,14 +132,12 @@ export default function FlappyBaby() {
         return;
       }
       
-      // Stone center in field-local coords
+      // Push away from click point
       const stoneCX = sx + STONE_W / 2;
       const stoneCY = sy + STONE_H / 2;
-      
       const dx = stoneCX - clickX;
       const dy = stoneCY - clickY;
       const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      
       velRef.current.x = (dx / len) * SPEED;
       velRef.current.y = (dy / len) * SPEED;
       
@@ -152,6 +156,27 @@ export default function FlappyBaby() {
     [gameLoop, resetState]
   );
   
+  const handleFieldClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (!fieldRef.current) return;
+      const rect = fieldRef.current.getBoundingClientRect();
+      handleInteraction(e.clientX - rect.left, e.clientY - rect.top);
+    },
+    [handleInteraction]
+  );
+  
+  const handleFieldTouch = useCallback(
+    (e: React.TouchEvent<HTMLDivElement>) => {
+      e.preventDefault(); // prevent scroll / double-tap zoom
+      if (!fieldRef.current) return;
+      const rect = fieldRef.current.getBoundingClientRect();
+      // Use first changed touch
+      const touch = e.changedTouches[0];
+      handleInteraction(touch.clientX - rect.left, touch.clientY - rect.top);
+    },
+    [handleInteraction]
+  );
+  
   useEffect(() => {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, []);
@@ -159,77 +184,74 @@ export default function FlappyBaby() {
   const stoneLabel =
           gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
   
-  // Stone position relative to field
-  const stoneLeft = renderPos.x - FIELD_LEFT;
-  const stoneTop = renderPos.y - FIELD_TOP;
-  
   return (
     <div
+      ref={containerRef}
       style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100vh",
+        position: "fixed",
+        inset: 0,
         backgroundColor: "#000",
+        display: "flex",
+        flexDirection: "column",
         fontFamily: "'Helvetica Neue', Arial, sans-serif",
+        touchAction: "none",
+        userSelect: "none",
       }}
     >
+      <style>{`
+        @keyframes shake {
+          0%,100% { transform: translateX(0); }
+          15%      { transform: translateX(-12px) rotate(-1deg); }
+          30%      { transform: translateX(10px)  rotate(1deg); }
+          45%      { transform: translateX(-8px); }
+          60%      { transform: translateX(6px); }
+          75%      { transform: translateX(-4px); }
+          90%      { transform: translateX(2px); }
+        }
+        @keyframes float {
+          0%,100% { transform: translateY(0px); }
+          50%     { transform: translateY(-8px); }
+        }
+      `}</style>
+      
+      {/* Header */}
       <div
         style={{
-          position: "relative",
-          width: GAME_WIDTH,
-          height: GAME_HEIGHT,
+          height: HEADER_H,
           backgroundColor: "#000",
+          display: "flex",
+          alignItems: "center",
+          paddingLeft: 24,
+          gap: 10,
+          flexShrink: 0,
+          animation: shake ? "shake 0.4s ease" : "none",
+        }}
+      >
+        <BabySVG size={36} />
+        <span style={{ color: "white", fontSize: 28, fontWeight: 300, letterSpacing: 2 }}>
+          {count}
+        </span>
+      </div>
+      
+      {/* Middle row: left border + field + right border */}
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
           overflow: "hidden",
           animation: shake ? "shake 0.4s ease" : "none",
         }}
       >
-        <style>{`
-          @keyframes shake {
-            0%,100% { transform: translateX(0); }
-            15%      { transform: translateX(-12px) rotate(-1deg); }
-            30%      { transform: translateX(10px)  rotate(1deg); }
-            45%      { transform: translateX(-8px); }
-            60%      { transform: translateX(6px); }
-            75%      { transform: translateX(-4px); }
-            90%      { transform: translateX(2px); }
-          }
-          @keyframes float {
-            0%,100% { transform: translateY(0px); }
-            50%     { transform: translateY(-8px); }
-          }
-        `}</style>
+        <div style={{ width: SIDE_PAD, flexShrink: 0, backgroundColor: "#000" }} />
         
-        {/* Header */}
-        <div
-          style={{
-            position: "absolute",
-            top: 0, left: 0, right: 0,
-            height: WALL_PADDING,
-            backgroundColor: "#000",
-            display: "flex",
-            alignItems: "center",
-            paddingLeft: 24,
-            gap: 10,
-            zIndex: 10,
-          }}
-        >
-          <BabySVG size={36} />
-          <span style={{ color: "white", fontSize: 28, fontWeight: 300, letterSpacing: 2 }}>
-            {count}
-          </span>
-        </div>
-        
-        {/* Play field — handles ALL clicks, does manual hit-test */}
+        {/* Play field */}
         <div
           ref={fieldRef}
           onClick={handleFieldClick}
+          onTouchStart={handleFieldTouch}
           style={{
-            position: "absolute",
-            top: FIELD_TOP,
-            left: FIELD_LEFT,
-            right: FIELD_LEFT,
-            bottom: WALL_PADDING,
+            flex: 1,
+            position: "relative",
             backgroundColor: "#fff",
             overflow: "hidden",
             cursor: "default",
@@ -239,14 +261,12 @@ export default function FlappyBaby() {
           <div
             style={{
               position: "absolute",
-              left: stoneLeft,
-              top: stoneTop,
+              left: renderPos.x,
+              top: renderPos.y,
               width: STONE_W,
               height: STONE_H,
-              cursor: "pointer",
-              userSelect: "none",
+              pointerEvents: "none",
               animation: gameState === "idle" ? "float 2s ease-in-out infinite" : "none",
-              pointerEvents: "none", // field handles clicks
             }}
           >
             <svg width={STONE_W} height={STONE_H} viewBox="0 0 100 70" fill="none">
@@ -270,6 +290,7 @@ export default function FlappyBaby() {
             </svg>
           </div>
           
+          {/* Dead overlay */}
           {gameState === "dead" && (
             <div
               style={{
@@ -278,7 +299,7 @@ export default function FlappyBaby() {
                 display: "flex",
                 alignItems: "flex-start",
                 justifyContent: "center",
-                paddingTop: 24,
+                paddingTop: 20,
                 pointerEvents: "none",
               }}
             >
@@ -289,16 +310,18 @@ export default function FlappyBaby() {
           )}
         </div>
         
-        {/* Bottom wall */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0, left: 0, right: 0,
-            height: WALL_PADDING,
-            backgroundColor: "#000",
-          }}
-        />
+        <div style={{ width: SIDE_PAD, flexShrink: 0, backgroundColor: "#000" }} />
       </div>
+      
+      {/* Footer */}
+      <div
+        style={{
+          height: FOOTER_H,
+          backgroundColor: "#000",
+          flexShrink: 0,
+          animation: shake ? "shake 0.4s ease" : "none",
+        }}
+      />
     </div>
   );
 }
