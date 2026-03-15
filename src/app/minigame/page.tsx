@@ -5,7 +5,12 @@ import FlappyBaby from '@/components/layout/minigame/baby';
 export default function Works() {
   return (
     <div className={styles.page}>
-      <FlappyBaby/>
+      <div style={{
+        width: '100%',
+        height: '70vw'
+      }}>
+        <FlappyBaby/>
+      </div>
     </div>
   );
 }

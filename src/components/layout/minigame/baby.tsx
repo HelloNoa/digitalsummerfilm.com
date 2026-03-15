@@ -3,16 +3,16 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 
 const GRAVITY = 0.4;
-const SPEED = 11;
-const STONE_W = 100;
-const STONE_H = 70;
-const HEADER_H = 80; // top black bar
-const FOOTER_H = 80; // bottom black bar
-const SIDE_PAD = 80; // left/right black border
+const SPEED = 16;
+const STONE_W = 100 * 2;
+const STONE_H = 70 * 2;
+const HEADER_H = 70;
+const FOOTER_H = 70;
+const SIDE_PAD = 36;
 
 type GameState = "idle" | "playing" | "dead";
 
-const BabySVG = ({ size = 40 }: { size?: number }) => (
+const BabySVG = ({ size = 36 }: { size?: number }) => (
   <svg width={size * 0.75} height={size} viewBox="0 0 56 75" fill="none">
     <ellipse cx="28" cy="14" rx="12" ry="13" fill="white" />
     <ellipse cx="24" cy="40" rx="14" ry="18" fill="white" />
@@ -27,39 +27,41 @@ export default function FlappyBaby() {
   const [count, setCount] = useState(0);
   const [shake, setShake] = useState(false);
   const [renderPos, setRenderPos] = useState({ x: 0, y: 0 });
-  const [fieldSize, setFieldSize] = useState({ w: 0, h: 0 });
   
   const velRef = useRef({ x: 0, y: 0 });
-  const posRef = useRef({ x: 0, y: 0 }); // in field-local px
+  const posRef = useRef({ x: 0, y: 0 });
   const animFrameRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const countRef = useRef(0);
   const gameStateRef = useRef<GameState>("idle");
   const fieldRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const wrapperRef = useRef<HTMLDivElement>(null);
   
-  // Compute field size from container
-  const updateFieldSize = useCallback(() => {
-    if (!containerRef.current) return;
-    const vw = containerRef.current.clientWidth;
-    const vh = containerRef.current.clientHeight;
-    const fw = Math.max(vw - SIDE_PAD * 2, 100);
-    const fh = Math.max(vh - HEADER_H - FOOTER_H, 100);
-    setFieldSize({ w: fw, h: fh });
-    // Re-center stone if idle
-    if (gameStateRef.current === "idle") {
-      const cx = fw / 2 - STONE_W / 2;
-      const cy = fh / 2 - STONE_H / 2;
-      posRef.current = { x: cx, y: cy };
-      setRenderPos({ x: cx, y: cy });
-    }
+  const getFieldSize = useCallback(() => {
+    if (!fieldRef.current) return { fw: 300, fh: 300 };
+    return { fw: fieldRef.current.clientWidth, fh: fieldRef.current.clientHeight };
   }, []);
   
+  const centerStone = useCallback(() => {
+    const { fw, fh } = getFieldSize();
+    const p = { x: fw / 2 - STONE_W / 2, y: fh / 2 - STONE_H / 2 };
+    posRef.current = { ...p };
+    setRenderPos({ ...p });
+  }, [getFieldSize]);
+  
+  // Re-center on resize only when idle
   useEffect(() => {
-    updateFieldSize();
-    window.addEventListener("resize", updateFieldSize);
-    return () => window.removeEventListener("resize", updateFieldSize);
-  }, [updateFieldSize]);
+    const obs = new ResizeObserver(() => {
+      if (gameStateRef.current === "idle") centerStone();
+    });
+    if (wrapperRef.current) obs.observe(wrapperRef.current);
+    return () => obs.disconnect();
+  }, [centerStone]);
+  
+  // Initial center after mount
+  useEffect(() => {
+    centerStone();
+  }, [centerStone]);
   
   const triggerShake = () => {
     setShake(true);
@@ -67,24 +69,19 @@ export default function FlappyBaby() {
   };
   
   const resetState = useCallback(() => {
-    if (!fieldRef.current) return;
-    const fw = fieldRef.current.clientWidth;
-    const fh = fieldRef.current.clientHeight;
-    const initPos = { x: fw / 2 - STONE_W / 2, y: fh / 2 - STONE_H / 2 };
-    posRef.current = { ...initPos };
+    cancelAnimationFrame(animFrameRef.current);
     velRef.current = { x: 0, y: 0 };
     countRef.current = 0;
-    setRenderPos(initPos);
     setCount(0);
-  }, []);
+    centerStone();
+  }, [centerStone]);
   
   const gameLoop = useCallback((timestamp: number) => {
     if (!lastTimeRef.current) lastTimeRef.current = timestamp;
     const delta = Math.min((timestamp - lastTimeRef.current) / 16, 3);
     lastTimeRef.current = timestamp;
     
-    const fw = fieldRef.current?.clientWidth ?? 300;
-    const fh = fieldRef.current?.clientHeight ?? 300;
+    const { fw, fh } = getFieldSize();
     
     velRef.current.y += GRAVITY * delta;
     posRef.current.x += velRef.current.x * delta;
@@ -112,34 +109,34 @@ export default function FlappyBaby() {
     
     setRenderPos({ ...posRef.current });
     animFrameRef.current = requestAnimationFrame(gameLoop);
-  }, []);
+  }, [getFieldSize]);
   
-  // Shared interaction logic: given field-local (clickX, clickY)
   const handleInteraction = useCallback(
     (clickX: number, clickY: number) => {
-      // Hit test against stone
       const sx = posRef.current.x;
       const sy = posRef.current.y;
-      const hitX = clickX >= sx && clickX <= sx + STONE_W;
-      const hitY = clickY >= sy && clickY <= sy + STONE_H;
-      if (!hitX || !hitY) return;
+      if (clickX < sx || clickX > sx + STONE_W || clickY < sy || clickY > sy + STONE_H) return;
       
       if (gameStateRef.current === "dead") {
-        cancelAnimationFrame(animFrameRef.current);
         resetState();
         gameStateRef.current = "idle";
         setGameState("idle");
         return;
       }
       
-      // Push away from click point
-      const stoneCX = sx + STONE_W / 2;
-      const stoneCY = sy + STONE_H / 2;
-      const dx = stoneCX - clickX;
-      const dy = stoneCY - clickY;
-      const len = Math.sqrt(dx * dx + dy * dy) || 1;
-      velRef.current.x = (dx / len) * SPEED;
-      velRef.current.y = (dy / len) * SPEED;
+      const dx = (sx + STONE_W / 2) - clickX;
+      const dy = (sy + STONE_H / 2) - clickY;
+      const len = Math.sqrt(dx * dx + dy * dy);
+      
+      if (len < 8) {
+        // 중앙 클릭: 무조건 위로
+        velRef.current.x = 0;
+        velRef.current.y = -SPEED;
+      } else {
+        velRef.current.x = (dx / len) * SPEED;
+        // 돌 위쪽 클릭 → 위로, 아래쪽 클릭 → 약하게 위로 (항상 위 방향 보장)
+        velRef.current.y = dy > 0 ? -(dy / len) * SPEED : SPEED * 0.3;
+      }
       
       if (gameStateRef.current === "idle") {
         gameStateRef.current = "playing";
@@ -156,7 +153,7 @@ export default function FlappyBaby() {
     [gameLoop, resetState]
   );
   
-  const handleFieldClick = useCallback(
+  const handleClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
       if (!fieldRef.current) return;
       const rect = fieldRef.current.getBoundingClientRect();
@@ -165,47 +162,45 @@ export default function FlappyBaby() {
     [handleInteraction]
   );
   
-  const handleFieldTouch = useCallback(
+  const handleTouch = useCallback(
     (e: React.TouchEvent<HTMLDivElement>) => {
-      e.preventDefault(); // prevent scroll / double-tap zoom
+      e.preventDefault();
       if (!fieldRef.current) return;
       const rect = fieldRef.current.getBoundingClientRect();
-      // Use first changed touch
-      const touch = e.changedTouches[0];
-      handleInteraction(touch.clientX - rect.left, touch.clientY - rect.top);
+      const t = e.changedTouches[0];
+      handleInteraction(t.clientX - rect.left, t.clientY - rect.top);
     },
     [handleInteraction]
   );
   
-  useEffect(() => {
-    return () => cancelAnimationFrame(animFrameRef.current);
-  }, []);
+  useEffect(() => () => cancelAnimationFrame(animFrameRef.current), []);
   
-  const stoneLabel =
-          gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
+  const stoneLabel = gameState === "idle" ? "TOUCH!" : gameState === "dead" ? "RETRY" : undefined;
   
   return (
     <div
-      ref={containerRef}
+      ref={wrapperRef}
       style={{
-        position: "fixed",
-        inset: 0,
+        width: "100%",
+        height: "100%",
         backgroundColor: "#000",
         display: "flex",
         flexDirection: "column",
         fontFamily: "'Helvetica Neue', Arial, sans-serif",
-        touchAction: "none",
         userSelect: "none",
+        touchAction: "none",
+        animation: shake ? "shake 0.4s ease" : "none",
+        overflow: "hidden",
       }}
     >
       <style>{`
         @keyframes shake {
           0%,100% { transform: translateX(0); }
-          15%      { transform: translateX(-12px) rotate(-1deg); }
-          30%      { transform: translateX(10px)  rotate(1deg); }
-          45%      { transform: translateX(-8px); }
-          60%      { transform: translateX(6px); }
-          75%      { transform: translateX(-4px); }
+          15%      { transform: translateX(-10px) rotate(-1deg); }
+          30%      { transform: translateX(8px) rotate(1deg); }
+          45%      { transform: translateX(-6px); }
+          60%      { transform: translateX(5px); }
+          75%      { transform: translateX(-3px); }
           90%      { transform: translateX(2px); }
         }
         @keyframes float {
@@ -215,40 +210,29 @@ export default function FlappyBaby() {
       `}</style>
       
       {/* Header */}
-      <div
-        style={{
-          height: HEADER_H,
-          backgroundColor: "#000",
-          display: "flex",
-          alignItems: "center",
-          paddingLeft: 24,
-          gap: 10,
-          flexShrink: 0,
-          animation: shake ? "shake 0.4s ease" : "none",
-        }}
-      >
-        <BabySVG size={36} />
-        <span style={{ color: "white", fontSize: 28, fontWeight: 300, letterSpacing: 2 }}>
+      <div style={{
+        height: HEADER_H,
+        flexShrink: 0,
+        display: "flex",
+        alignItems: "center",
+        paddingLeft: 20,
+        gap: 10,
+      }}>
+        <BabySVG size={32} />
+        <span style={{ color: "white", fontSize: 24, fontWeight: 300, letterSpacing: 2 }}>
           {count}
         </span>
       </div>
       
-      {/* Middle row: left border + field + right border */}
-      <div
-        style={{
-          flex: 1,
-          display: "flex",
-          overflow: "hidden",
-          animation: shake ? "shake 0.4s ease" : "none",
-        }}
-      >
-        <div style={{ width: SIDE_PAD, flexShrink: 0, backgroundColor: "#000" }} />
+      {/* Middle row */}
+      <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+        <div style={{ width: SIDE_PAD, flexShrink: 0 }} />
         
         {/* Play field */}
         <div
           ref={fieldRef}
-          onClick={handleFieldClick}
-          onTouchStart={handleFieldTouch}
+          onClick={handleClick}
+          onTouchStart={handleTouch}
           style={{
             flex: 1,
             position: "relative",
@@ -290,38 +274,34 @@ export default function FlappyBaby() {
             </svg>
           </div>
           
-          {/* Dead overlay */}
           {gameState === "dead" && (
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                display: "flex",
-                alignItems: "flex-start",
-                justifyContent: "center",
-                paddingTop: 20,
-                pointerEvents: "none",
-              }}
-            >
-              <span style={{ fontSize: 12, letterSpacing: 3, color: "#000", opacity: 0.35, textTransform: "uppercase" }}>
+            <div style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "flex-start",
+              justifyContent: "center",
+              paddingTop: 16,
+              pointerEvents: "none",
+            }}>
+              <span style={{
+                fontSize: 11,
+                letterSpacing: 3,
+                color: "#000",
+                opacity: 0.3,
+                textTransform: "uppercase",
+              }}>
                 score: {count}
               </span>
             </div>
           )}
         </div>
         
-        <div style={{ width: SIDE_PAD, flexShrink: 0, backgroundColor: "#000" }} />
+        <div style={{ width: SIDE_PAD, flexShrink: 0 }} />
       </div>
       
       {/* Footer */}
-      <div
-        style={{
-          height: FOOTER_H,
-          backgroundColor: "#000",
-          flexShrink: 0,
-          animation: shake ? "shake 0.4s ease" : "none",
-        }}
-      />
+      <div style={{ height: FOOTER_H, flexShrink: 0 }} />
     </div>
   );
 }
