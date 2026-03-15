@@ -101,7 +101,6 @@ export default function FlappyBaby() {
       velRef.current.y += GRAVITY * delta;
       posRef.current.x += velRef.current.x * delta;
       posRef.current.y += velRef.current.y * delta;
-      console.log(velRef.current.y * delta)
       
       // 좌우 바운스
       if (posRef.current.x < 0) {
